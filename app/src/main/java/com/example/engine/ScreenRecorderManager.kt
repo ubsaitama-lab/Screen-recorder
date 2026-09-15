@@ -158,7 +158,7 @@ class ScreenRecorderManager(
             recordWidth = (recordWidth / 2) * 2
             recordHeight = (recordHeight / 2) * 2
 
-            val moviesDir = context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: context.filesDir
+            val moviesDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "ApexScreenRecord")
             if (!moviesDir.exists()) moviesDir.mkdirs()
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             currentOutputFile = File(moviesDir, "APEX_REC_${timestamp}.mp4")
@@ -350,6 +350,10 @@ class ScreenRecorderManager(
 
         if (file != null && file.exists()) {
             val fileLen = file.length()
+            
+            // Tell Android Gallery to index the file immediately
+            android.media.MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), null, null)
+
             val initialHasDlss = currentSettings.dlss5Mode == Dlss5Mode.REALTIME_FORCE
 
             val videoEntity = RecordedVideoEntity(
