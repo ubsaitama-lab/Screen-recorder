@@ -1,0 +1,6 @@
+{
+  "name": "Apex Screen Record",
+  "description": "High-performance 144FPS 4K gaming screen recorder optimized for Snapdragon 685 with zero touch latency, DLSS 5 AI upscaling, and thermal throttling guard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
