@@ -143,13 +143,12 @@ class ScreenRecorderManager(
             val displayWidth = displayMetrics.widthPixels
             val displayHeight = displayMetrics.heightPixels
 
-            var recordWidth: Int
-            var recordHeight: Int
+            var recordWidth = displayWidth
+            var recordHeight = displayHeight
 
-            if (currentSettings.dlss5Mode == Dlss5Mode.POST_PROCESS || currentSettings.dlss5Mode == Dlss5Mode.REALTIME_FALLBACK) {
-                recordWidth = displayWidth
-                recordHeight = displayHeight
-            } else {
+            // Always cap real-time recording to display dimensions to prevent severe hardware encoder lag
+            // DLSS 5 will upscale it in post-process or simulate the real-time effect without killing the GPU
+            if (currentSettings.resolution.width < displayWidth) {
                 recordWidth = currentSettings.resolution.width
                 recordHeight = currentSettings.resolution.height
             }
@@ -252,6 +251,16 @@ class ScreenRecorderManager(
             MediaRecorder()
         }
 
+        val hasAudioPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.RECORD_AUDIO
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val audioEnabled = (currentSettings.audioSource != AudioSourceOption.MUTE) && hasAudioPermission
+
+        if (audioEnabled) {
+            recorder.setAudioSource(MediaRecorder.AudioSource.MIC)
+        }
+
         recorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
         recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
         recorder.setOutputFile(outputFile.absolutePath)
@@ -259,6 +268,13 @@ class ScreenRecorderManager(
         recorder.setVideoFrameRate(fps)
         recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
         recorder.setVideoEncodingBitRate(10_000_000)
+
+        if (audioEnabled) {
+            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            recorder.setAudioSamplingRate(48000)
+            recorder.setAudioEncodingBitRate(192000)
+        }
+
         recorder.prepare()
         this.mediaRecorder = recorder
     }
