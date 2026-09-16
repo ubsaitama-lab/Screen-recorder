@@ -91,6 +91,7 @@ class ScreenRecorderManager(
     private var mediaProjection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var mediaRecorder: MediaRecorder? = null
+    private var advancedRecorder: AdvancedScreenRecorder? = null
 
     private var currentOutputFile: File? = null
     private var recordingStartTime = 0L
@@ -147,6 +148,9 @@ class ScreenRecorderManager(
             var recordWidth = displayWidth
             var recordHeight = displayHeight
 
+            val isAdvancedAudio = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                    (currentSettings.audioSource == AudioSourceOption.INTERNAL_ONLY || currentSettings.audioSource == AudioSourceOption.INTERNAL_AND_MIC)
+
             // Always cap real-time recording to display dimensions to prevent severe hardware encoder lag
             // DLSS 5 will upscale it in post-process or simulate the real-time effect without killing the GPU
             if (currentSettings.resolution.width < displayWidth) {
@@ -163,27 +167,44 @@ class ScreenRecorderManager(
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             currentOutputFile = File(moviesDir, "APEX_REC_${timestamp}.mp4")
 
-            try {
-                initMediaRecorder(recordWidth, recordHeight, currentSettings.fps.fps.coerceAtMost(60), currentOutputFile!!)
-            } catch (e: Exception) {
-                Log.w(TAG, "Hardware encoder initialization failed, trying fallback AVC profile", e)
-                initMediaRecorderFallback((displayWidth / 2) * 2, (displayHeight / 2) * 2, 30, currentOutputFile!!)
-            }
-
-            mediaProjection?.let { projection ->
-                virtualDisplay = projection.createVirtualDisplay(
-                    "ApexScreenCapture",
-                    recordWidth,
-                    recordHeight,
-                    screenDensity,
-                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
-                    mediaRecorder?.surface,
-                    null,
-                    null
+            if (isAdvancedAudio) {
+                advancedRecorder = AdvancedScreenRecorder(
+                    context = context,
+                    mediaProjection = mediaProjection!!,
+                    outputFile = currentOutputFile!!,
+                    width = recordWidth,
+                    height = recordHeight,
+                    fps = currentSettings.fps.fps.coerceAtMost(60),
+                    videoBitrate = currentSettings.bitrate.bps,
+                    recordInternalAudio = true,
+                    recordMicAudio = currentSettings.audioSource == AudioSourceOption.INTERNAL_AND_MIC,
+                    useHevc = currentSettings.codec == CodecOption.HEVC
                 )
+                advancedRecorder?.start()
+            } else {
+                try {
+                    initMediaRecorder(recordWidth, recordHeight, currentSettings.fps.fps.coerceAtMost(60), currentOutputFile!!)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Hardware encoder initialization failed, trying fallback AVC profile", e)
+                    initMediaRecorderFallback((displayWidth / 2) * 2, (displayHeight / 2) * 2, 30, currentOutputFile!!)
+                }
+
+                mediaProjection?.let { projection ->
+                    virtualDisplay = projection.createVirtualDisplay(
+                        "ApexScreenCapture",
+                        recordWidth,
+                        recordHeight,
+                        screenDensity,
+                        DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
+                        mediaRecorder?.surface,
+                        null,
+                        null
+                    )
+                }
+
+                mediaRecorder?.start()
             }
 
-            mediaRecorder?.start()
             recordingStartTime = SystemClock.elapsedRealtime()
             pausedDurationAcc = 0L
             isPaused = false
@@ -323,6 +344,10 @@ class ScreenRecorderManager(
     fun pauseRecording() {
         if (_recordingState.value is RecordingState.Recording && !isPaused) {
             try {
+                if (advancedRecorder != null) {
+                    coroutineScope.launch { _toastEvents.emit("Pause is unsupported in true Internal Audio mode.") }
+                    return
+                }
                 mediaRecorder?.pause()
                 pauseStartTime = SystemClock.elapsedRealtime()
                 isPaused = true
@@ -357,7 +382,11 @@ class ScreenRecorderManager(
         }
 
         try {
-            mediaRecorder?.stop()
+            if (advancedRecorder != null) {
+                advancedRecorder?.stop()
+            } else {
+                mediaRecorder?.stop()
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Stop media recorder exception", e)
         }
@@ -419,6 +448,10 @@ class ScreenRecorderManager(
     }
 
     private fun cleanup() {
+        try {
+            advancedRecorder?.stop()
+            advancedRecorder = null
+        } catch (_: Exception) {}
         try {
             virtualDisplay?.release()
             virtualDisplay = null
