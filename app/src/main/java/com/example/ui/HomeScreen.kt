@@ -722,6 +722,28 @@ fun HomeScreen(
                         colors = SwitchDefaults.colors(checkedThumbColor = CyberCyan, checkedTrackColor = CyberCyan.copy(alpha = 0.3f))
                     )
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "DLSS 5 Visual Enhancer (In-Game)", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                        Text(
+                            text = "Applies a real-time gaming vibrancy & contrast filter over your screen while recording.",
+                            fontSize = 11.sp,
+                            color = TextSecondary
+                        )
+                    }
+                    Switch(
+                        checked = settings.dlss5RealTimeOverlay,
+                        onCheckedChange = { viewModel.updateSettings(settings.copy(dlss5RealTimeOverlay = it)) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = CyberAmber, checkedTrackColor = CyberAmber.copy(alpha = 0.3f))
+                    )
+                }
             }
         }
 

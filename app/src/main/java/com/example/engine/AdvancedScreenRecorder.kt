@@ -46,11 +46,29 @@ class AdvancedScreenRecorder(
         if (isRecording.get()) return
         isRecording.set(true)
 
-        mediaMuxer = MediaMuxer(outputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+        try {
+            mediaMuxer = MediaMuxer(outputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+        } catch (e: Exception) {
+            throw RuntimeException("Muxer creation failed: ${e.message}")
+        }
         
-        setupVideo()
+        try {
+            setupVideo()
+        } catch (e: Exception) {
+            throw RuntimeException("Video setup failed: ${e.message}")
+        }
+        
         if (recordInternalAudio || recordMicAudio) {
-            setupAudio()
+            try {
+                setupAudio()
+            } catch (e: Exception) {
+                Log.e(TAG, "Audio setup failed, continuing without audio", e)
+                // Fallback to video only
+                audioCodec = null
+                audioRecord = null
+                mediaMuxer?.start()
+                muxerStarted = true
+            }
         } else {
             mediaMuxer?.start()
             muxerStarted = true
@@ -63,21 +81,40 @@ class AdvancedScreenRecorder(
     }
 
     private fun setupVideo() {
-        val mime = if (useHevc) MediaFormat.MIMETYPE_VIDEO_HEVC else MediaFormat.MIMETYPE_VIDEO_AVC
-        val format = MediaFormat.createVideoFormat(mime, width, height).apply {
+        var mime = if (useHevc) MediaFormat.MIMETYPE_VIDEO_HEVC else MediaFormat.MIMETYPE_VIDEO_AVC
+        
+        // Capping resolution for SD685 hardware encoder safety
+        val safeWidth = minOf(width, 1920)
+        val safeHeight = minOf(height, 2400)
+        
+        var format = MediaFormat.createVideoFormat(mime, safeWidth, safeHeight).apply {
             setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
             setInteger(MediaFormat.KEY_BIT_RATE, videoBitrate)
             setInteger(MediaFormat.KEY_FRAME_RATE, fps)
             setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)
         }
         
-        videoCodec = MediaCodec.createEncoderByType(mime)
-        videoCodec?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+        try {
+            videoCodec = MediaCodec.createEncoderByType(mime)
+            videoCodec?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to configure video codec for $mime, falling back to AVC at 720p", e)
+            mime = MediaFormat.MIMETYPE_VIDEO_AVC
+            format = MediaFormat.createVideoFormat(mime, 720, 1280).apply {
+                setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
+                setInteger(MediaFormat.KEY_BIT_RATE, 5000000)
+                setInteger(MediaFormat.KEY_FRAME_RATE, 30)
+                setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)
+            }
+            videoCodec = MediaCodec.createEncoderByType(mime)
+            videoCodec?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+        }
+
         val surface = videoCodec?.createInputSurface()
         videoCodec?.start()
 
         virtualDisplay = mediaProjection.createVirtualDisplay(
-            "ScreenRecorder", width, height, context.resources.displayMetrics.densityDpi,
+            "ScreenRecorder", format.getInteger(MediaFormat.KEY_WIDTH), format.getInteger(MediaFormat.KEY_HEIGHT), context.resources.displayMetrics.densityDpi,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, surface, null, null
         )
     }
@@ -87,6 +124,15 @@ class AdvancedScreenRecorder(
         val channelConfig = AudioFormat.CHANNEL_IN_MONO
         val audioFormat = AudioFormat.ENCODING_PCM_16BIT
         val bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat) * 2
+
+        val hasAudioPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.RECORD_AUDIO
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+        if (!hasAudioPermission) {
+            throw SecurityException("RECORD_AUDIO permission not granted")
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && recordInternalAudio) {
             val config = AudioPlaybackCaptureConfiguration.Builder(mediaProjection)
@@ -121,7 +167,7 @@ class AdvancedScreenRecorder(
     private fun videoEncodeLoop() {
         val bufferInfo = MediaCodec.BufferInfo()
         while (isRecording.get()) {
-            val outputBufferId = videoCodec?.dequeueOutputBuffer(bufferInfo, 10000) ?: -1
+            val outputBufferId = try { videoCodec?.dequeueOutputBuffer(bufferInfo, 10000) ?: -1 } catch (e: Exception) { -1 }
             if (outputBufferId == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 val newFormat = videoCodec?.outputFormat
                 if (newFormat != null) {
@@ -144,13 +190,13 @@ class AdvancedScreenRecorder(
                         } catch (e: Exception) { Log.e(TAG, "Video mux error", e) }
                     }
                 }
-                videoCodec?.releaseOutputBuffer(outputBufferId, false)
+                try { videoCodec?.releaseOutputBuffer(outputBufferId, false) } catch (e: Exception) {}
             }
         }
     }
 
     private fun audioEncodeLoop() {
-        audioRecord?.startRecording()
+        try { audioRecord?.startRecording() } catch (e: Exception) { return }
         val bufferInfo = MediaCodec.BufferInfo()
         val bufferSize = 1024 * 4
         val audioBuffer = ByteArray(bufferSize)
@@ -158,17 +204,17 @@ class AdvancedScreenRecorder(
         while (isRecording.get()) {
             val readResult = audioRecord?.read(audioBuffer, 0, bufferSize) ?: 0
             if (readResult > 0) {
-                val inputBufferId = audioCodec?.dequeueInputBuffer(10000) ?: -1
+                val inputBufferId = try { audioCodec?.dequeueInputBuffer(10000) ?: -1 } catch (e: Exception) { -1 }
                 if (inputBufferId >= 0) {
                     val inputBuffer = audioCodec?.getInputBuffer(inputBufferId)
                     inputBuffer?.clear()
                     inputBuffer?.put(audioBuffer, 0, readResult)
                     val pts = System.nanoTime() / 1000
-                    audioCodec?.queueInputBuffer(inputBufferId, 0, readResult, pts, 0)
+                    try { audioCodec?.queueInputBuffer(inputBufferId, 0, readResult, pts, 0) } catch (e: Exception) {}
                 }
             }
 
-            var outputBufferId = audioCodec?.dequeueOutputBuffer(bufferInfo, 10000) ?: -1
+            var outputBufferId = try { audioCodec?.dequeueOutputBuffer(bufferInfo, 10000) ?: -1 } catch (e: Exception) { -1 }
             while (outputBufferId >= 0) {
                 if (outputBufferId == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                     val newFormat = audioCodec?.outputFormat
@@ -192,12 +238,12 @@ class AdvancedScreenRecorder(
                             } catch (e: Exception) { Log.e(TAG, "Audio mux error", e) }
                         }
                     }
-                    audioCodec?.releaseOutputBuffer(outputBufferId, false)
+                    try { audioCodec?.releaseOutputBuffer(outputBufferId, false) } catch (e: Exception) {}
                 }
-                outputBufferId = audioCodec?.dequeueOutputBuffer(bufferInfo, 0) ?: -1
+                outputBufferId = try { audioCodec?.dequeueOutputBuffer(bufferInfo, 0) ?: -1 } catch (e: Exception) { -1 }
             }
         }
-        audioRecord?.stop()
+        try { audioRecord?.stop() } catch (e: Exception) {}
     }
 
     private fun checkMuxerStart() {
@@ -205,8 +251,12 @@ class AdvancedScreenRecorder(
             val videoReady = videoTrackIndex >= 0
             val audioReady = if (audioCodec != null) audioTrackIndex >= 0 else true
             if (videoReady && audioReady) {
-                mediaMuxer?.start()
-                muxerStarted = true
+                try {
+                    mediaMuxer?.start()
+                    muxerStarted = true
+                } catch (e: Exception) {
+                    Log.e(TAG, "Muxer start failed", e)
+                }
             }
         }
     }

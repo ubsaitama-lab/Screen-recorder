@@ -212,7 +212,7 @@ class ScreenRecorderManager(
             startMetricsLoop()
         } catch (e: Exception) {
             Log.e(TAG, "Error starting recording", e)
-            _recordingState.value = RecordingState.Error("Capture initiation: ${e.localizedMessage ?: "Device encoder unsupported"}")
+            _recordingState.value = RecordingState.Error("Capture initiation: ${e.message.takeIf { !it.isNullOrBlank() } ?: e.javaClass.simpleName}")
             cleanup()
         }
     }

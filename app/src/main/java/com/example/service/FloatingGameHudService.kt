@@ -75,9 +75,17 @@ class FloatingGameHudService : Service() {
             gravity = Gravity.TOP or Gravity.START
         }
 
-        // Apply a subtle contrast/vibrancy filter using a translucent colored view
+        // Apply a subtle gaming vibrancy filter (slight vignette and warm tint)
         overlayFilterView = View(this).apply {
-            setBackgroundColor(0x1500E5FF) // Slight Cyber Cyan tint for enhanced vibrancy
+            val gradient = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                intArrayOf(0x15FF6D00, 0x05000000, 0x15FF6D00)
+            )
+            gradient.shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+            gradient.gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
+            gradient.setGradientCenter(0.5f, 0.5f)
+            gradient.gradientRadius = 2000f
+            background = gradient
         }
 
         try {
