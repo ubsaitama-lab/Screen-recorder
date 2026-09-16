@@ -27,11 +27,7 @@ class TouchOptimizationManager(private val context: Context) {
      * cycles to Android's InputReader and InputDispatcher touch services.
      */
     fun applyTouchLatencyShield() {
-        try {
-            // Lower priority of helper background thread
-            Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
-        } catch (_: Exception) {}
-
+        // Do not lower the thread priority of the main thread, as it causes massive system-wide lag
         _status.value = _status.value.copy(
             isZeroTouchLagActive = true,
             backgroundPriorityEnforced = true,
@@ -44,10 +40,6 @@ class TouchOptimizationManager(private val context: Context) {
      * Releases priority constraint if needed.
      */
     fun restoreDefaultPriority() {
-        try {
-            Process.setThreadPriority(Process.THREAD_PRIORITY_DEFAULT)
-        } catch (_: Exception) {}
-
         _status.value = _status.value.copy(
             backgroundPriorityEnforced = false,
             estimatedTouchLatencyMs = 3.5f,

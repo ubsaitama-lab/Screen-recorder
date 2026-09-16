@@ -46,10 +46,14 @@ class ScreenRecordService : Service() {
                 val notification = buildNotification("Recording active (4K 144FPS DLSS 5)", "Zero touch latency active")
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        var serviceTypes = ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            serviceTypes = serviceTypes or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                        }
                         startForeground(
                             NOTIFICATION_ID,
                             notification,
-                            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                            serviceTypes
                         )
                     } else {
                         startForeground(NOTIFICATION_ID, notification)

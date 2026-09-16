@@ -175,7 +175,7 @@ class ScreenRecorderManager(
                     recordWidth,
                     recordHeight,
                     screenDensity,
-                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
                     mediaRecorder?.surface,
                     null,
                     null
