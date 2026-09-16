@@ -148,19 +148,29 @@ class ScreenRecorderManager(
             var recordWidth = displayWidth
             var recordHeight = displayHeight
 
-            val isAdvancedAudio = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-                    (currentSettings.audioSource == AudioSourceOption.INTERNAL_ONLY || currentSettings.audioSource == AudioSourceOption.INTERNAL_AND_MIC)
+            // Cap the maximum dimension to ensure hardware encoder compatibility
+            val maxTargetDimen = Math.max(currentSettings.resolution.width, currentSettings.resolution.height)
+            val maxDisplayDimen = Math.max(displayWidth, displayHeight)
+            
+            if (maxDisplayDimen > maxTargetDimen) {
+                val scale = maxTargetDimen.toFloat() / maxDisplayDimen.toFloat()
+                recordWidth = (displayWidth * scale).toInt()
+                recordHeight = (displayHeight * scale).toInt()
+            }
 
-            // Always cap real-time recording to display dimensions to prevent severe hardware encoder lag
-            // DLSS 5 will upscale it in post-process or simulate the real-time effect without killing the GPU
-            if (currentSettings.resolution.width < displayWidth) {
-                recordWidth = currentSettings.resolution.width
-                recordHeight = currentSettings.resolution.height
+            // Fallback cap to 1920 to prevent "keeps stopping" crash on tall screens
+            if (Math.max(recordWidth, recordHeight) > 2560) {
+                val scale = 2560f / Math.max(recordWidth, recordHeight).toFloat()
+                recordWidth = (recordWidth * scale).toInt()
+                recordHeight = (recordHeight * scale).toInt()
             }
 
             // Ensure dimensions are even
             recordWidth = (recordWidth / 2) * 2
             recordHeight = (recordHeight / 2) * 2
+
+            val isAdvancedAudio = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                    (currentSettings.audioSource == AudioSourceOption.INTERNAL_ONLY || currentSettings.audioSource == AudioSourceOption.INTERNAL_AND_MIC)
 
             // Use app-specific cache to avoid Scoped Storage crashes during recording
             val cacheDir = context.getExternalFilesDir(Environment.DIRECTORY_DCIM) ?: context.cacheDir
@@ -180,13 +190,25 @@ class ScreenRecorderManager(
                     recordMicAudio = currentSettings.audioSource == AudioSourceOption.INTERNAL_AND_MIC,
                     useHevc = currentSettings.codec == CodecOption.HEVC
                 )
-                advancedRecorder?.start()
+                try {
+                    advancedRecorder?.start()
+                } catch (e: Exception) {
+                    Log.e(TAG, "AdvancedScreenRecorder failed to start", e)
+                    _recordingState.value = RecordingState.Error("Advanced Recorder failed to start. Try a lower resolution.")
+                    return
+                }
             } else {
                 try {
                     initMediaRecorder(recordWidth, recordHeight, currentSettings.fps.fps.coerceAtMost(60), currentOutputFile!!)
                 } catch (e: Exception) {
                     Log.w(TAG, "Hardware encoder initialization failed, trying fallback AVC profile", e)
-                    initMediaRecorderFallback((displayWidth / 2) * 2, (displayHeight / 2) * 2, 30, currentOutputFile!!)
+                    try {
+                        initMediaRecorderFallback(recordWidth, recordHeight, 30, currentOutputFile!!)
+                    } catch (e2: Exception) {
+                        Log.e(TAG, "Fallback encoder also failed! The screen resolution might not be supported.", e2)
+                        _recordingState.value = RecordingState.Error("Device hardware encoder failed to start. Try a lower resolution.")
+                        return
+                    }
                 }
 
                 mediaProjection?.let { projection ->
@@ -202,7 +224,13 @@ class ScreenRecorderManager(
                     )
                 }
 
-                mediaRecorder?.start()
+                try {
+                    mediaRecorder?.start()
+                } catch (e: Exception) {
+                    Log.e(TAG, "MediaRecorder failed to start", e)
+                    _recordingState.value = RecordingState.Error("Failed to start MediaRecorder")
+                    return
+                }
             }
 
             recordingStartTime = SystemClock.elapsedRealtime()
@@ -395,6 +423,13 @@ class ScreenRecorderManager(
         cleanup()
 
         if (file != null && file.exists()) {
+            if (file.length() <= 10240) {
+                // Video is broken/0-bytes due to hardware encoder crash. Delete it so it doesn't become a ghost file.
+                try { file.delete() } catch (_: Exception) {}
+                _recordingState.value = RecordingState.Error("Video saving failed. Device hardware encoder crashed.")
+                return
+            }
+
             val fileLen = file.length()
             
             // Export to public MediaStore (Gallery) to bypass Scoped Storage limitations

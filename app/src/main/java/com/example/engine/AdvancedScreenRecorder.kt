@@ -83,11 +83,7 @@ class AdvancedScreenRecorder(
     private fun setupVideo() {
         var mime = if (useHevc) MediaFormat.MIMETYPE_VIDEO_HEVC else MediaFormat.MIMETYPE_VIDEO_AVC
         
-        // Capping resolution for SD685 hardware encoder safety
-        val safeWidth = minOf(width, 1920)
-        val safeHeight = minOf(height, 2400)
-        
-        var format = MediaFormat.createVideoFormat(mime, safeWidth, safeHeight).apply {
+        var format = MediaFormat.createVideoFormat(mime, width, height).apply {
             setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
             setInteger(MediaFormat.KEY_BIT_RATE, videoBitrate)
             setInteger(MediaFormat.KEY_FRAME_RATE, fps)
@@ -98,9 +94,11 @@ class AdvancedScreenRecorder(
             videoCodec = MediaCodec.createEncoderByType(mime)
             videoCodec?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to configure video codec for $mime, falling back to AVC at 720p", e)
+            Log.w(TAG, "Failed to configure video codec for $mime, falling back to AVC", e)
             mime = MediaFormat.MIMETYPE_VIDEO_AVC
-            format = MediaFormat.createVideoFormat(mime, 720, 1280).apply {
+            
+            // Just drop to 30fps and standard bitrate but keep dimensions, as wrong dimensions will break surface
+            format = MediaFormat.createVideoFormat(mime, width, height).apply {
                 setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
                 setInteger(MediaFormat.KEY_BIT_RATE, 5000000)
                 setInteger(MediaFormat.KEY_FRAME_RATE, 30)
