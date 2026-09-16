@@ -173,7 +173,7 @@ class ScreenRecorderManager(
                     (currentSettings.audioSource == AudioSourceOption.INTERNAL_ONLY || currentSettings.audioSource == AudioSourceOption.INTERNAL_AND_MIC)
 
             // Use app-specific cache to avoid Scoped Storage crashes during recording
-            val cacheDir = context.getExternalFilesDir(Environment.DIRECTORY_DCIM) ?: context.cacheDir
+            val cacheDir = context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: context.cacheDir
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             currentOutputFile = File(cacheDir, "APEX_REC_${timestamp}.mp4")
 
@@ -442,10 +442,10 @@ class ScreenRecorderManager(
                     put(android.provider.MediaStore.Video.Media.DISPLAY_NAME, file.name)
                     put(android.provider.MediaStore.Video.Media.MIME_TYPE, "video/mp4")
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        put(android.provider.MediaStore.Video.Media.RELATIVE_PATH, android.os.Environment.DIRECTORY_DCIM + "/ApexScreenRecord")
+                        put(android.provider.MediaStore.Video.Media.RELATIVE_PATH, android.os.Environment.DIRECTORY_MOVIES + "/ApexScreenRecord")
                         put(android.provider.MediaStore.Video.Media.IS_PENDING, 1)
                     } else {
-                        val publicDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "ApexScreenRecord")
+                        val publicDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "ApexScreenRecord")
                         if (!publicDir.exists()) publicDir.mkdirs()
                         val publicFile = File(publicDir, file.name)
                         put(android.provider.MediaStore.Video.Media.DATA, publicFile.absolutePath)
@@ -475,7 +475,7 @@ class ScreenRecorderManager(
 
             if (!galleryExportSuccess) {
                 try {
-                    val publicDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "ApexScreenRecord")
+                    val publicDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "ApexScreenRecord")
                     if (!publicDir.exists()) publicDir.mkdirs()
                     val publicFile = File(publicDir, file.name)
                     file.copyTo(publicFile, overwrite = true)
