@@ -163,7 +163,7 @@ class ScreenRecorderManager(
             recordHeight = (recordHeight / 2) * 2
 
             // Use app-specific cache to avoid Scoped Storage crashes during recording
-            val cacheDir = context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: context.cacheDir
+            val cacheDir = context.getExternalFilesDir(Environment.DIRECTORY_DCIM) ?: context.cacheDir
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             currentOutputFile = File(cacheDir, "APEX_REC_${timestamp}.mp4")
 
@@ -398,14 +398,20 @@ class ScreenRecorderManager(
             val fileLen = file.length()
             
             // Export to public MediaStore (Gallery) to bypass Scoped Storage limitations
+            var finalPublicPath = file.absolutePath
             try {
                 val resolver = context.contentResolver
                 val values = android.content.ContentValues().apply {
                     put(android.provider.MediaStore.Video.Media.DISPLAY_NAME, file.name)
                     put(android.provider.MediaStore.Video.Media.MIME_TYPE, "video/mp4")
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        put(android.provider.MediaStore.Video.Media.RELATIVE_PATH, android.os.Environment.DIRECTORY_MOVIES + "/ApexScreenRecord")
+                        put(android.provider.MediaStore.Video.Media.RELATIVE_PATH, android.os.Environment.DIRECTORY_DCIM + "/ApexScreenRecord")
                         put(android.provider.MediaStore.Video.Media.IS_PENDING, 1)
+                    } else {
+                        val publicDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "ApexScreenRecord")
+                        if (!publicDir.exists()) publicDir.mkdirs()
+                        val publicFile = File(publicDir, file.name)
+                        put(android.provider.MediaStore.Video.Media.DATA, publicFile.absolutePath)
                     }
                 }
                 val uri = resolver.insert(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
@@ -416,6 +422,16 @@ class ScreenRecorderManager(
                         values.put(android.provider.MediaStore.Video.Media.IS_PENDING, 0)
                         resolver.update(uri, values, null, null)
                     }
+                    
+                    // Attempt to get the actual public file path for our database if possible
+                    val proj = arrayOf(android.provider.MediaStore.Video.Media.DATA)
+                    val cursor = resolver.query(uri, proj, null, null, null)
+                    if (cursor != null && cursor.moveToFirst()) {
+                        val pathIndex = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Video.Media.DATA)
+                        val path = cursor.getString(pathIndex)
+                        if (path != null) finalPublicPath = path
+                        cursor.close()
+                    }
                 }
             } catch (e: Exception) { Log.e(TAG, "Gallery export failed", e) }
 
@@ -423,7 +439,7 @@ class ScreenRecorderManager(
 
             val videoEntity = RecordedVideoEntity(
                 title = "Apex Gaming Clip - " + SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(Date()),
-                filePath = file.absolutePath,
+                filePath = finalPublicPath,
                 durationMs = finalDuration,
                 fileSizeBytes = fileLen,
                 width = currentSettings.resolution.width,
