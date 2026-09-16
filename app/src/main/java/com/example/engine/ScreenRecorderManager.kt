@@ -99,7 +99,8 @@ class ScreenRecorderManager(
     private var isPaused = false
 
     private var timerJob: Job? = null
-    private var currentSettings = RecorderSettings()
+    var currentSettings = RecorderSettings()
+        private set
 
     fun setMediaProjection(projection: MediaProjection) {
         this.mediaProjection = projection

@@ -108,10 +108,10 @@ enum class SnapdragonProfile(
 }
 
 data class RecorderSettings(
-    val resolution: ResolutionOption = ResolutionOption.RES_4K,
-    val fps: FpsOption = FpsOption.FPS_144,
+    val resolution: ResolutionOption = ResolutionOption.RES_1080P, // SD685 stutters heavily saving 4K directly
+    val fps: FpsOption = FpsOption.FPS_60, // 144FPS encode will drop frames on SD685, DLSS 5 will upscale it
     val codec: CodecOption = CodecOption.HEVC,
-    val bitrate: BitrateOption = BitrateOption.VBR_MINIMAL,
+    val bitrate: BitrateOption = BitrateOption.BALANCED_25, // Minimize encode latency
     val audioSource: AudioSourceOption = AudioSourceOption.INTERNAL_AND_MIC,
     val dlss5Mode: Dlss5Mode = Dlss5Mode.POST_PROCESS,
     val snapdragonProfile: SnapdragonProfile = SnapdragonProfile.REDMI15_ESPORTS,
@@ -121,5 +121,8 @@ data class RecorderSettings(
     val countdownSeconds: Int = 3,
     val shakeToStop: Boolean = true,
     val dlss5SharpnessLevel: Float = 0.85f,
-    val dlss5FrameGenEnabled: Boolean = true
+    val dlss5VibrancyBoost: Float = 1.2f,
+    val dlss5ContrastEnhance: Float = 1.15f,
+    val dlss5FrameGenEnabled: Boolean = true,
+    val dlss5RealTimeOverlay: Boolean = true
 )

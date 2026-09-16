@@ -184,13 +184,13 @@ fun Sd685OptimizerScreen(
                     }
                     Column {
                         Text(text = "SCHEDULER", fontSize = 10.sp, color = TextMuted)
-                        Text(text = "CFS Background", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = CyberCyan)
+                        Text(text = "Standard Hardware", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = CyberCyan)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = "• Recording worker threads run at THREAD_PRIORITY_BACKGROUND to ensure Android's InputDispatcher gets top CPU priority during fast swipes, aim adjustments, and multi-touch combos in FPS/MOBA games.",
+                    text = "• Recording worker threads run at Standard Hardware priority to prevent the extreme system-wide lag and touch interference that aggressive background throttling can cause on Adreno 610.",
                     fontSize = 11.sp,
                     color = TextSecondary,
                     lineHeight = 15.sp

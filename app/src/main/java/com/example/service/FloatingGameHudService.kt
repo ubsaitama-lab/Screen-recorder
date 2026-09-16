@@ -28,6 +28,7 @@ class FloatingGameHudService : Service() {
 
     private var windowManager: WindowManager? = null
     private var floatingView: View? = null
+    private var overlayFilterView: View? = null
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -40,11 +41,48 @@ class FloatingGameHudService : Service() {
         }
         try {
             windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+            
+            // Check if DLSS5 Real-Time Overlay is enabled in settings
+            val settings = ScreenRecorderManager.instance?.currentSettings
+            if (settings?.dlss5RealTimeOverlay == true) {
+                setupScreenFilterOverlay()
+            }
+            
             setupFloatingWidget()
             observeRecordingState()
         } catch (e: Exception) {
             stopSelf()
         }
+    }
+
+    private fun setupScreenFilterOverlay() {
+        val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        } else {
+            @Suppress("DEPRECATION")
+            WindowManager.LayoutParams.TYPE_PHONE
+        }
+
+        val overlayParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            layoutFlag,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or 
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or 
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+        }
+
+        // Apply a subtle contrast/vibrancy filter using a translucent colored view
+        overlayFilterView = View(this).apply {
+            setBackgroundColor(0x1500E5FF) // Slight Cyber Cyan tint for enhanced vibrancy
+        }
+
+        try {
+            windowManager?.addView(overlayFilterView, overlayParams)
+        } catch (_: Exception) {}
     }
 
     private fun setupFloatingWidget() {
@@ -163,6 +201,11 @@ class FloatingGameHudService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         floatingView?.let {
+            try {
+                windowManager?.removeView(it)
+            } catch (_: Exception) {}
+        }
+        overlayFilterView?.let {
             try {
                 windowManager?.removeView(it)
             } catch (_: Exception) {}

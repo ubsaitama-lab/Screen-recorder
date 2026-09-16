@@ -300,6 +300,90 @@ fun Dlss5StudioScreen(
                     )
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Vibrancy Slider
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = "Color Vibrancy Boost", fontSize = 13.sp, color = TextPrimary)
+                        Text(
+                            text = "${(settings.dlss5VibrancyBoost * 100).toInt()}%",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CyberEmerald
+                        )
+                    }
+                    Slider(
+                        value = settings.dlss5VibrancyBoost,
+                        onValueChange = {
+                            viewModel.updateSettings(settings.copy(dlss5VibrancyBoost = it))
+                        },
+                        valueRange = 1.0f..2.0f,
+                        colors = SliderDefaults.colors(thumbColor = CyberEmerald, activeTrackColor = CyberEmerald)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Contrast Slider
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = "Dynamic Contrast Enhance", fontSize = 13.sp, color = TextPrimary)
+                        Text(
+                            text = "${(settings.dlss5ContrastEnhance * 100).toInt()}%",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CyberEmerald
+                        )
+                    }
+                    Slider(
+                        value = settings.dlss5ContrastEnhance,
+                        onValueChange = {
+                            viewModel.updateSettings(settings.copy(dlss5ContrastEnhance = it))
+                        },
+                        valueRange = 1.0f..1.5f,
+                        colors = SliderDefaults.colors(thumbColor = CyberEmerald, activeTrackColor = CyberEmerald)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Real-Time Overlay Switch
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "On-Screen Visual Enhancer",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "Apply real-time display color tuning while recording",
+                            fontSize = 11.sp,
+                            color = TextSecondary
+                        )
+                    }
+                    Switch(
+                        checked = settings.dlss5RealTimeOverlay,
+                        onCheckedChange = {
+                            viewModel.updateSettings(settings.copy(dlss5RealTimeOverlay = it))
+                        },
+                        colors = SwitchDefaults.colors(checkedThumbColor = CyberEmerald, checkedTrackColor = CyberEmerald.copy(alpha = 0.3f))
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 // Frame Generation 144 FPS Toggle
                 Row(
                     modifier = Modifier.fillMaxWidth(),
