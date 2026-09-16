@@ -48,9 +48,7 @@ enum class AudioSourceOption(
     val label: String,
     val description: String
 ) {
-    INTERNAL_AND_MIC("Internal Game + Voice", "Mixes device game audio with microphone commentary"),
-    INTERNAL_ONLY("Internal Game Audio", "Clean gameplay sounds without background noise"),
-    MIC_ONLY("Microphone Voice Only", "Captures voice and team chat through mic"),
+    MIC_ONLY("Microphone (Picks up game via speakers)", "Captures voice and game sounds played out loud. True internal audio requires an engine rewrite."),
     MUTE("No Audio (Mute)", "Silent high-speed video track")
 }
 
@@ -112,7 +110,7 @@ data class RecorderSettings(
     val fps: FpsOption = FpsOption.FPS_60, // 144FPS encode will drop frames on SD685, DLSS 5 will upscale it
     val codec: CodecOption = CodecOption.HEVC,
     val bitrate: BitrateOption = BitrateOption.BALANCED_25, // Minimize encode latency
-    val audioSource: AudioSourceOption = AudioSourceOption.INTERNAL_AND_MIC,
+    val audioSource: AudioSourceOption = AudioSourceOption.MIC_ONLY,
     val dlss5Mode: Dlss5Mode = Dlss5Mode.POST_PROCESS,
     val snapdragonProfile: SnapdragonProfile = SnapdragonProfile.REDMI15_ESPORTS,
     val zeroTouchLagMode: Boolean = true,
