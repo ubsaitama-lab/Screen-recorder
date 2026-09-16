@@ -100,6 +100,12 @@ class MainActivity : ComponentActivity() {
                 val permissionsToRequest = mutableListOf(Manifest.permission.RECORD_AUDIO)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+                    permissionsToRequest.add(Manifest.permission.READ_MEDIA_VIDEO)
+                } else {
+                    permissionsToRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+                    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                        permissionsToRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    }
                 }
 
                 val permissionLauncher = rememberLauncherForActivityResult(

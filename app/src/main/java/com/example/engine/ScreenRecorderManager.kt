@@ -399,6 +399,8 @@ class ScreenRecorderManager(
             
             // Export to public MediaStore (Gallery) to bypass Scoped Storage limitations
             var finalPublicPath = file.absolutePath
+            var galleryExportSuccess = false
+            
             try {
                 val resolver = context.contentResolver
                 val values = android.content.ContentValues().apply {
@@ -432,8 +434,24 @@ class ScreenRecorderManager(
                         if (path != null) finalPublicPath = path
                         cursor.close()
                     }
+                    galleryExportSuccess = true
                 }
-            } catch (e: Exception) { Log.e(TAG, "Gallery export failed", e) }
+            } catch (e: Exception) { Log.e(TAG, "MediaStore export failed, trying direct copy", e) }
+
+            if (!galleryExportSuccess) {
+                try {
+                    val publicDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "ApexScreenRecord")
+                    if (!publicDir.exists()) publicDir.mkdirs()
+                    val publicFile = File(publicDir, file.name)
+                    file.copyTo(publicFile, overwrite = true)
+                    finalPublicPath = publicFile.absolutePath
+                } catch (e: Exception) {
+                    Log.e(TAG, "Direct copy failed", e)
+                }
+            }
+            
+            // Force MediaScanner to index the file so it appears in Gallery instantly
+            android.media.MediaScannerConnection.scanFile(context, arrayOf(finalPublicPath), arrayOf("video/mp4"), null)
 
             val initialHasDlss = currentSettings.dlss5Mode == Dlss5Mode.REALTIME_FORCE
 
