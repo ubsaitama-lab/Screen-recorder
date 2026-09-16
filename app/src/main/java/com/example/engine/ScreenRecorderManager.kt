@@ -162,12 +162,10 @@ class ScreenRecorderManager(
             recordWidth = (recordWidth / 2) * 2
             recordHeight = (recordHeight / 2) * 2
 
-            var moviesDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "ApexScreenRecord")
-            if (!moviesDir.exists() && !moviesDir.mkdirs()) {
-                moviesDir = context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: context.filesDir
-            }
+            // Use app-specific cache to avoid Scoped Storage crashes during recording
+            val cacheDir = context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: context.cacheDir
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            currentOutputFile = File(moviesDir, "APEX_REC_${timestamp}.mp4")
+            currentOutputFile = File(cacheDir, "APEX_REC_${timestamp}.mp4")
 
             if (isAdvancedAudio) {
                 advancedRecorder = AdvancedScreenRecorder(
@@ -399,8 +397,27 @@ class ScreenRecorderManager(
         if (file != null && file.exists()) {
             val fileLen = file.length()
             
-            // Tell Android Gallery to index the file immediately
-            android.media.MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), null, null)
+            // Export to public MediaStore (Gallery) to bypass Scoped Storage limitations
+            try {
+                val resolver = context.contentResolver
+                val values = android.content.ContentValues().apply {
+                    put(android.provider.MediaStore.Video.Media.DISPLAY_NAME, file.name)
+                    put(android.provider.MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        put(android.provider.MediaStore.Video.Media.RELATIVE_PATH, android.os.Environment.DIRECTORY_MOVIES + "/ApexScreenRecord")
+                        put(android.provider.MediaStore.Video.Media.IS_PENDING, 1)
+                    }
+                }
+                val uri = resolver.insert(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
+                if (uri != null) {
+                    resolver.openOutputStream(uri)?.use { out -> java.io.FileInputStream(file).use { it.copyTo(out) } }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        values.clear()
+                        values.put(android.provider.MediaStore.Video.Media.IS_PENDING, 0)
+                        resolver.update(uri, values, null, null)
+                    }
+                }
+            } catch (e: Exception) { Log.e(TAG, "Gallery export failed", e) }
 
             val initialHasDlss = currentSettings.dlss5Mode == Dlss5Mode.REALTIME_FORCE
 
