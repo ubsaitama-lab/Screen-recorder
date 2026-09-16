@@ -370,7 +370,13 @@ fun VideoPlayerDialog(
                                         val mediaController = MediaController(ctx)
                                         mediaController.setAnchorView(this)
                                         setMediaController(mediaController)
-                                        setVideoPath(video.filePath)
+                                        val file = File(video.filePath)
+                                        if (file.exists()) {
+                                            val uri = androidx.core.content.FileProvider.getUriForFile(ctx, "${ctx.packageName}.provider", file)
+                                            setVideoURI(uri)
+                                        } else {
+                                            setVideoPath(video.filePath)
+                                        }
                                         setOnPreparedListener { mp ->
                                             mp.isLooping = true
                                             start()
@@ -464,7 +470,7 @@ fun shareVideoFile(context: Context, path: String) {
     try {
         val file = File(path)
         if (!file.exists()) return
-        val uri = Uri.fromFile(file)
+        val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "video/mp4"
             putExtra(Intent.EXTRA_STREAM, uri)
@@ -472,4 +478,19 @@ fun shareVideoFile(context: Context, path: String) {
         }
         context.startActivity(Intent.createChooser(shareIntent, "Share Gaming Clip"))
     } catch (_: Exception) {}
+}
+
+fun playVideoFile(context: Context, path: String) {
+    try {
+        val file = File(path)
+        if (!file.exists()) return
+        val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+        val playIntent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "video/mp4")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(playIntent)
+    } catch (e: Exception) {
+        android.widget.Toast.makeText(context, "No video player found", android.widget.Toast.LENGTH_SHORT).show()
+    }
 }

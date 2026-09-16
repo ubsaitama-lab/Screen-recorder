@@ -82,12 +82,23 @@ class FloatingGameHudService : Service() {
             gradient.gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
             gradient.colors = intArrayOf(
                 0x00000000.toInt(), // Center: Crystal clear
-                0x15FF3D00.toInt(), // Mid: Warm punchy vibrancy for ground/action
-                0x45001A33.toInt()  // Edges: Deep cinematic cyan/blue shadow vignette
+                0x05FF3D00.toInt(), // Mid: Subtle warm punchy vibrancy for ground/action (Reduced alpha for clarity)
+                0x25001A33.toInt()  // Edges: Deep cinematic cyan/blue shadow vignette (Reduced alpha)
             )
             gradient.setGradientCenter(0.5f, 0.5f)
             val metrics = resources.displayMetrics
-            gradient.gradientRadius = Math.max(metrics.widthPixels, metrics.heightPixels) * 0.75f
+            gradient.gradientRadius = Math.max(metrics.widthPixels, metrics.heightPixels) * 0.95f
+            
+            // On Android 12+, add a subtle blur/contrast effect to the overlay layer to simulate visual processing
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val colorMatrix = android.graphics.ColorMatrix().apply {
+                    setSaturation(1.2f) // Boost saturation
+                }
+                setRenderEffect(android.graphics.RenderEffect.createColorFilterEffect(
+                    android.graphics.ColorMatrixColorFilter(colorMatrix)
+                ))
+            }
+
             background = gradient
         }
 

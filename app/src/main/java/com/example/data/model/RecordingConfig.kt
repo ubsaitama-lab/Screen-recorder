@@ -124,5 +124,6 @@ data class RecorderSettings(
     val dlss5VibrancyBoost: Float = 1.2f,
     val dlss5ContrastEnhance: Float = 1.15f,
     val dlss5FrameGenEnabled: Boolean = true,
-    val dlss5RealTimeOverlay: Boolean = true
+    val dlss5RealTimeOverlay: Boolean = true,
+    val useShizuku: Boolean = false
 )

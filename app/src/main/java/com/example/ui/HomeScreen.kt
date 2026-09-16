@@ -1,5 +1,4 @@
 package com.example.ui
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -82,7 +81,6 @@ import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
@@ -95,7 +93,6 @@ fun HomeScreen(
     val hardwareReport by viewModel.hardwareReport.collectAsStateWithLifecycle()
     val dlss5State by viewModel.dlss5State.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
-
     val infiniteTransition = rememberInfiniteTransition(label = "rec_pulse")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1.0f,
@@ -106,7 +103,6 @@ fun HomeScreen(
         ),
         label = "pulse"
     )
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -143,7 +139,6 @@ fun HomeScreen(
                     color = CyberCyan
                 )
             }
-
             // Live status badge
             Box(
                 modifier = Modifier
@@ -173,7 +168,6 @@ fun HomeScreen(
                 }
             }
         }
-
         // Hero Recording Card
         Card(
             modifier = Modifier
@@ -181,7 +175,7 @@ fun HomeScreen(
                 .testTag("hero_recording_card"),
             colors = CardDefaults.cardColors(containerColor = DarkSurface),
             shape = RoundedCornerShape(20.dp),
-            border = androidx.compose.foundation.BorderStroke(
+border = androidx.compose.foundation.BorderStroke(
                 1.5.dp,
                 if (recordingState is RecordingState.Recording) CyberRed else DarkBorder
             )
@@ -223,7 +217,6 @@ fun HomeScreen(
                                 )
                             }
                         }
-
                         Spacer(modifier = Modifier.height(14.dp))
                         Text(
                             text = "Tap to Record Gameplay at 144 FPS",
@@ -237,7 +230,6 @@ fun HomeScreen(
                             color = TextSecondary
                         )
                     }
-
                     is RecordingState.Countdown -> {
                         Box(
                             modifier = Modifier
@@ -262,7 +254,6 @@ fun HomeScreen(
                             fontSize = 14.sp
                         )
                     }
-
                     is RecordingState.Recording -> {
                         // Animated pulsing rec indicator
                         Box(
@@ -280,13 +271,11 @@ fun HomeScreen(
                                 modifier = Modifier.size(36.dp)
                             )
                         }
-
                         Spacer(modifier = Modifier.height(14.dp))
                         val seconds = (recordingState.durationMs / 1000) % 60
                         val minutes = (recordingState.durationMs / (1000 * 60)) % 60
                         val hours = (recordingState.durationMs / (1000 * 60 * 60))
                         val timeStr = String.format("%02d:%02d:%02d", hours, minutes, seconds)
-
                         Text(
                             text = timeStr,
                             fontFamily = FontFamily.Monospace,
@@ -294,7 +283,6 @@ fun HomeScreen(
                             fontWeight = FontWeight.Black,
                             color = Color.White
                         )
-
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -318,7 +306,6 @@ fun HomeScreen(
                                 fontSize = 13.sp
                             )
                         }
-
                         if (recordingState.dlss5AutoFallbackQueued) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Box(
@@ -335,7 +322,6 @@ fun HomeScreen(
                                 )
                             }
                         }
-
                         Spacer(modifier = Modifier.height(18.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             OutlinedButton(
@@ -347,7 +333,6 @@ fun HomeScreen(
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text("Pause")
                             }
-
                             Button(
                                 onClick = { viewModel.stopRecording() },
                                 colors = ButtonDefaults.buttonColors(containerColor = CyberRed),
@@ -359,7 +344,6 @@ fun HomeScreen(
                             }
                         }
                     }
-
                     is RecordingState.Paused -> {
                         Text(
                             text = "RECORDING PAUSED",
@@ -387,7 +371,6 @@ fun HomeScreen(
                             }
                         }
                     }
-
                     is RecordingState.Finished -> {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
@@ -415,7 +398,6 @@ fun HomeScreen(
                             Text("New Recording")
                         }
                     }
-
                     is RecordingState.Error -> {
                         Text(
                             text = "Recording Error",
@@ -438,13 +420,12 @@ fun HomeScreen(
                 }
             }
         }
-
         // DLSS 5 Processing Banner if active
         AnimatedVisibility(visible = dlss5State.isProcessing) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1E2E)),
-                border = androidx.compose.foundation.BorderStroke(1.dp, CyberCyan)
+border = androidx.compose.foundation.BorderStroke(1.dp, CyberCyan)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -481,13 +462,12 @@ fun HomeScreen(
                 }
             }
         }
-
         // Snapdragon 685 Performance Highlights Card
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = DarkSurfaceElevated),
             shape = RoundedCornerShape(16.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder)
+border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
@@ -512,7 +492,6 @@ fun HomeScreen(
                         fontSize = 13.sp
                     )
                 }
-
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -533,13 +512,12 @@ fun HomeScreen(
                 }
             }
         }
-
         // DLSS 5 AI Mode Selection
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = DarkSurface),
             shape = RoundedCornerShape(16.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder)
+border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
@@ -554,7 +532,6 @@ fun HomeScreen(
                     color = TextSecondary
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-
                 Dlss5Mode.values().forEach { mode ->
                     val isSelected = settings.dlss5Mode == mode
                     Box(
@@ -606,13 +583,12 @@ fun HomeScreen(
                 }
             }
         }
-
         // Video Configuration: Resolution & FPS
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = DarkSurface),
             shape = RoundedCornerShape(16.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder)
+border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
@@ -622,7 +598,6 @@ fun HomeScreen(
                     color = TextPrimary
                 )
                 Spacer(modifier = Modifier.height(10.dp))
-
                 Text(text = "TARGET RESOLUTION", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextMuted)
                 Spacer(modifier = Modifier.height(6.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -638,7 +613,6 @@ fun HomeScreen(
                         )
                     }
                 }
-
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(text = "FRAME RATE", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextMuted)
                 Spacer(modifier = Modifier.height(6.dp))
@@ -655,7 +629,6 @@ fun HomeScreen(
                         )
                     }
                 }
-
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(text = "AUDIO SOURCE", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextMuted)
                 Spacer(modifier = Modifier.height(6.dp))
@@ -674,13 +647,12 @@ fun HomeScreen(
                 }
             }
         }
-
         // Toggles: Floating HUD & Zero Touch Lag
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = DarkSurfaceElevated),
             shape = RoundedCornerShape(16.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder)
+border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
@@ -702,7 +674,6 @@ fun HomeScreen(
                         colors = SwitchDefaults.colors(checkedThumbColor = CyberEmerald, checkedTrackColor = CyberEmerald.copy(alpha = 0.3f))
                     )
                 }
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -722,9 +693,27 @@ fun HomeScreen(
                         colors = SwitchDefaults.colors(checkedThumbColor = CyberCyan, checkedTrackColor = CyberCyan.copy(alpha = 0.3f))
                     )
                 }
-
                 Spacer(modifier = Modifier.height(16.dp))
-
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "Shizuku Root Mode (Deep Audio)", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                        Text(
+                            text = "Bypass game blocks to record raw internal audio via Shizuku.",
+                            fontSize = 11.sp,
+                            color = TextSecondary
+                        )
+                    }
+                    Switch(
+                        checked = settings.useShizuku,
+                        onCheckedChange = { viewModel.updateSettings(settings.copy(useShizuku = it)) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = CyberCyan, checkedTrackColor = CyberCyan.copy(alpha = 0.3f))
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -746,7 +735,6 @@ fun HomeScreen(
                 }
             }
         }
-
         Spacer(modifier = Modifier.height(24.dp))
     }
 }

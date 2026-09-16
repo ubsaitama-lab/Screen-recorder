@@ -1,0 +1,11 @@
+tasks.register("printShizuku") {
+    doLast {
+        val jarFile = configurations.getByName("compileClasspath").files.find { it.name.contains("shizuku") && it.name.contains("api") }
+        println("Shizuku jar: $jarFile")
+        if (jarFile != null) {
+            exec {
+                commandLine("javap", "-public", "-cp", jarFile.absolutePath, "rikka.shizuku.Shizuku")
+            }
+        }
+    }
+}

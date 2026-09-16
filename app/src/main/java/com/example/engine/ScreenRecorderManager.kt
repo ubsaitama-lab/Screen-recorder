@@ -130,7 +130,18 @@ class ScreenRecorderManager(
 
     private fun executeStartRecording() {
         try {
-            if (mediaProjection == null) {
+            if (currentSettings.useShizuku) {
+                if (!ShizukuRecorder.isReady()) {
+                    ShizukuRecorder.requestPermission { granted ->
+                        if (granted) {
+                            executeStartRecording()
+                        } else {
+                            _recordingState.value = RecordingState.Error("Shizuku permission denied")
+                        }
+                    }
+                    return
+                }
+            } else if (mediaProjection == null) {
                 _recordingState.value = RecordingState.Error("Media projection permission required")
                 return
             }
@@ -177,7 +188,16 @@ class ScreenRecorderManager(
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             currentOutputFile = File(cacheDir, "APEX_REC_${timestamp}.mp4")
 
-            if (isAdvancedAudio) {
+            if (currentSettings.useShizuku) {
+                ShizukuRecorder.startRecording(
+                    outputFile = currentOutputFile!!,
+                    width = recordWidth,
+                    height = recordHeight,
+                    fps = currentSettings.fps.fps.coerceAtMost(60), // Screenrecord limits
+                    bitrateBps = currentSettings.bitrate.bps,
+                    internalAudio = (currentSettings.audioSource == AudioSourceOption.INTERNAL_ONLY || currentSettings.audioSource == AudioSourceOption.INTERNAL_AND_MIC)
+                )
+            } else if (isAdvancedAudio) {
                 advancedRecorder = AdvancedScreenRecorder(
                     context = context,
                     mediaProjection = mediaProjection!!,
@@ -536,6 +556,9 @@ class ScreenRecorderManager(
     }
 
     private fun cleanup() {
+        try {
+            ShizukuRecorder.stopRecording()
+        } catch (_: Exception) {}
         try {
             advancedRecorder?.stop()
             advancedRecorder = null
