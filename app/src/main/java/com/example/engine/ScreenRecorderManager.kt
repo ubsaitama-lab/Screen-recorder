@@ -162,8 +162,10 @@ class ScreenRecorderManager(
             recordWidth = (recordWidth / 2) * 2
             recordHeight = (recordHeight / 2) * 2
 
-            val moviesDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "ApexScreenRecord")
-            if (!moviesDir.exists()) moviesDir.mkdirs()
+            var moviesDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "ApexScreenRecord")
+            if (!moviesDir.exists() && !moviesDir.mkdirs()) {
+                moviesDir = context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: context.filesDir
+            }
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             currentOutputFile = File(moviesDir, "APEX_REC_${timestamp}.mp4")
 
